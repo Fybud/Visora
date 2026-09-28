@@ -101,11 +101,6 @@ export function GooglePanel({
 
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Show results and auto-scroll down
-  useEffect(() => {
-    if (phase !== "results") return;
-    const scroller = listRef.current;
-    if (!scroller) return;
   // Show results and auto-scroll — snappy so it feels like a live SERP, not a crawl.
   useEffect(() => {
     if (phase !== "results") return;
@@ -128,7 +123,6 @@ export function GooglePanel({
       requestAnimationFrame(tick);
     }, startDelay);
     const waitMs = results.length > 0 ? startDelay + dur + 280 : 800;
-    const verdictAt = window.setTimeout(() => setPhase("verdict"), waitMs);
     const verdictAt = window.setTimeout(() => setPhase("verdict"), waitMs);
     return () => {
       window.clearTimeout(start);

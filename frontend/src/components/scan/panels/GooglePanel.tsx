@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SerpCheckSample } from "@/lib/journey";
+import { scanNumber, scanStringList } from "@/lib/useScanStream";
 
-// Show up to 12 keyword searches instead of 5
-const SHOW_LIMIT = 12;
+const SHOW_LIMIT = 16;
+const MAX_RESULTS = 12;
 
 type Phase = "typing" | "results" | "verdict" | "next";
 
@@ -46,6 +47,7 @@ function faviconLetter(domain: string) {
 export function GooglePanel({
   domain,
   serpChecks,
+  values,
   onComplete,
 }: {
   domain: string;
@@ -77,14 +79,22 @@ export function GooglePanel({
 
   const active = playlist[activeIdx] ?? null;
   const query = active?.query ?? "";
-  const results = active?.results ?? [];
+  const results = (active?.results ?? []).slice(0, MAX_RESULTS);
   const typed = useTypewriter(query, phase === "typing");
 
-  // Start typing on each new query
+  const expected = Math.max(
+    scanNumber(values ?? {}, "intents_count") ?? 0,
+    scanStringList(values ?? {}, "keywords").length,
+    ...playlist.map((c) => c.queriesChecked || 0),
+    playlist.length,
+  );
+  const allQueriesIn = expected > 0 && playlist.length >= expected;
+
+  // Start typing on each new query — keep a natural typing pace.
   useEffect(() => {
     if (!query) return;
     setPhase("typing");
-    const typeMs = Math.min(1100, Math.max(550, query.length * 22));
+    const typeMs = Math.min(1600, Math.max(700, query.length * 28 + 120));
     const id = window.setTimeout(() => setPhase("results"), typeMs);
     return () => window.clearTimeout(id);
   }, [activeIdx, query]);
@@ -96,13 +106,19 @@ export function GooglePanel({
     if (phase !== "results") return;
     const scroller = listRef.current;
     if (!scroller) return;
+  // Show results and auto-scroll — snappy so it feels like a live SERP, not a crawl.
+  useEffect(() => {
+    if (phase !== "results") return;
+    const scroller = listRef.current;
+    if (!scroller) return;
     scroller.scrollTop = 0;
+    const startDelay = 140;
+    const dur = Math.min(980, 640 + results.length * 26);
     const start = window.setTimeout(() => {
       const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
       if (max < 40) return;
       const from = scroller.scrollTop;
       const t0 = performance.now();
-      const dur = 1400;
       const tick = (now: number) => {
         const t = Math.min(1, (now - t0) / dur);
         const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
@@ -110,8 +126,9 @@ export function GooglePanel({
         if (t < 1) requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
-    }, 320);
-    const waitMs = results.length > 0 ? 2200 : 1400;
+    }, startDelay);
+    const waitMs = results.length > 0 ? startDelay + dur + 280 : 800;
+    const verdictAt = window.setTimeout(() => setPhase("verdict"), waitMs);
     const verdictAt = window.setTimeout(() => setPhase("verdict"), waitMs);
     return () => {
       window.clearTimeout(start);
@@ -124,24 +141,26 @@ export function GooglePanel({
     if (phase !== "verdict") return;
     const id = window.setTimeout(() => {
       setPhase("next");
-    }, 1400);
+    }, 700);
     return () => window.clearTimeout(id);
   }, [phase, active, query]);
 
-  // Move to next query
+  // Move to next query. Stay here until every search has arrived and been shown.
   useEffect(() => {
     if (phase !== "next") return;
     const next = activeIdx + 1;
-    if (next >= playlist.length) {
-      setPhase("typing"); // stay on last
-      if (!completedRef.current && playlist.length > 0) {
-        completedRef.current = true;
-        onComplete?.();
-      }
+    if (next < playlist.length) {
+      setActiveIdx(next);
       return;
     }
-    setActiveIdx(next);
-  }, [phase, activeIdx, playlist.length, onComplete]);
+    if (!allQueriesIn) {
+      return;
+    }
+    if (!completedRef.current && playlist.length > 0) {
+      completedRef.current = true;
+      onComplete?.();
+    }
+  }, [phase, activeIdx, playlist.length, allQueriesIn, onComplete]);
 
   const found = Boolean(active?.foundInTop50 && (active?.brandPosition ?? 0) > 0);
   const brandPos = active?.brandPosition ?? 0;
@@ -162,6 +181,14 @@ export function GooglePanel({
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-5xl flex-col gap-2">
+      {playlist.length > 0 ? (
+        <div className="flex shrink-0 items-center justify-between gap-3 text-[11px] font-semibold text-zinc-500">
+          <span className="tabular-nums">
+            Search {Math.min(activeIdx + 1, playlist.length)} of {Math.max(expected, playlist.length)}
+          </span>
+          <span className="min-w-0 truncate text-zinc-400">{query}</span>
+        </div>
+      ) : null}
       {rivalDomains.length > 0 ? (
         <div className="flex shrink-0 items-center gap-2 overflow-hidden">
           <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
@@ -239,7 +266,7 @@ export function GooglePanel({
           >
             {results.length === 0 || phase === "typing" ? (
               <div className="space-y-7 py-2">
-                {Array.from({ length: 5 }).map((_, i) => (
+                {Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="animate-pulse space-y-2.5">
                     <div className="flex items-center gap-2">
                       <div className="h-6 w-6 rounded-full bg-[#f1f3f4]" />

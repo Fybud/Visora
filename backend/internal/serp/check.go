@@ -69,7 +69,7 @@ func CheckProjectIntents(projectID uint) error {
 			}
 
 			brandPosition := 0
-			topResults := make([]map[string]interface{}, 0, 8)
+			topResults := make([]map[string]interface{}, 0, 15)
 
 			for _, entry := range entries {
 				isOwnDomain := false
@@ -95,7 +95,7 @@ func CheckProjectIntents(projectID uint) error {
 				}
 				db.DB.Create(&serpRes)
 
-				if len(topResults) < 8 {
+				if len(topResults) < 15 {
 					topResults = append(topResults, map[string]interface{}{
 						"position": entry.Position,
 						"domain":   entryDomain,

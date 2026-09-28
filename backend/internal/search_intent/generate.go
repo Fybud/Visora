@@ -14,7 +14,7 @@ import (
 	"visora-backend/internal/llm"
 )
 
-const maxIntents = 5
+const maxIntents = 8
 
 type GeneratedIntent struct {
 	Keyword  string `json:"keyword"`
@@ -161,8 +161,9 @@ Searches the brand analyst suggested: %v%s
 
 What the site says:
 %s
-Write 8-10 Google searches a real buyer in %s would type to FIND THIS SITE under the positioning above, before they know the brand.
-Never the brand or domain alone. Prefer commercial / transactional searches.
+Write 8-10 Google searches a real buyer in %s would type to FIND BRANDS AND COMPANIES like this site, before they know the brand.
+Every keyword must be a brand-discovery search (include words like brand, brands, company, companies, or "who sells"), e.g. "best evening snack brands India" — never a shopping query that Google answers with products or SKUs ("healthy evening snacks online").
+Never the brand or domain alone. Prefer commercial searches.
 When a positioning sentence is set, use its words even if the crawled pages do not yet say them — those are the searches the client wants to win.
 Only skip a place/audience modifier when no positioning was given and the pages do not show it.%s
 

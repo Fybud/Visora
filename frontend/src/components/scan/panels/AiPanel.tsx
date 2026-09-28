@@ -18,7 +18,7 @@ const MODELS: {
 ];
 
 /** Type like a person: char-by-char for short text, slightly faster for longer. */
-function useTypewriter(text: string, active: boolean, cps = 42) {
+function useTypewriter(text: string, active: boolean, cps = 90) {
   const [shown, setShown] = useState("");
   const [done, setDone] = useState(false);
 
@@ -30,7 +30,7 @@ function useTypewriter(text: string, active: boolean, cps = 42) {
       return;
     }
     let i = 0;
-    const tickMs = Math.max(12, Math.round(1000 / cps));
+    const tickMs = Math.max(8, Math.round(1000 / cps));
     const id = window.setInterval(() => {
       i += 1;
       setShown(text.slice(0, i));
@@ -189,19 +189,19 @@ function ChatShell({
       ? reply.response.slice(0, 900)
       : "";
 
-  const { shown: typedAsk, done: askDone } = useTypewriter(prompt, Boolean(prompt), 55);
+  const { shown: typedAsk, done: askDone } = useTypewriter(prompt, Boolean(prompt), 110);
   const [answerReady, setAnswerReady] = useState(false);
   useEffect(() => {
     setAnswerReady(false);
     if (!askDone || !responseText) return;
-    const t = window.setTimeout(() => setAnswerReady(true), 280);
+    const t = window.setTimeout(() => setAnswerReady(true), 80);
     return () => window.clearTimeout(t);
   }, [askDone, responseText, prompt]);
 
   const { shown: typedAnswer, done: answerDone } = useTypewriter(
     responseText,
     answerReady,
-    responseText.length > 400 ? 70 : 48,
+    responseText.length > 280 ? 140 : 110,
   );
   const streamingAsk = Boolean(prompt) && !askDone;
   const streamingAnswer = answerReady && Boolean(responseText) && !answerDone;
@@ -385,8 +385,7 @@ function statusClass(status: string, id: ModelId) {
   return dark ? "bg-white/10 text-white/55" : "bg-zinc-200/80 text-zinc-500";
 }
 
-const READ_AFTER_ANSWERS_MS = 9000;
-const MAX_PER_QUESTION_MS = 18000;
+const HOLD_AFTER_ANSWERS_MS = 1100;
 
 export function AiPanel({
   domain,
@@ -405,8 +404,14 @@ export function AiPanel({
     for (const p of geoPrompts.map((row) => row.prompt?.trim()).filter(Boolean) as string[]) {
       if (!unique.some((u) => u.toLowerCase() === p.toLowerCase())) unique.push(p);
     }
-    return unique.slice(0, 4);
+    return unique;
   }, [geoPrompts]);
+
+  const expected = Math.max(
+    ...geoPrompts.map((p) => p.total || 0),
+    allPrompts.length,
+  );
+  const allPromptsIn = expected > 0 && allPrompts.length >= expected;
 
   const [promptIdx, setPromptIdx] = useState(0);
   const onCompleteRef = useRef(onComplete);
@@ -433,30 +438,49 @@ export function AiPanel({
       return Boolean(r && (r.response || r.failed));
     });
 
-  // Each question plays once, in order. Never loops back to an earlier one.
-  const advance = React.useCallback(() => {
+  const finishOrAdvance = React.useCallback(() => {
     if (promptIdx + 1 < allPrompts.length) {
-      setPromptIdx(promptIdx + 1);
-    } else if (!completedRef.current && allPrompts.length > 0) {
+      setPromptIdx((i) => i + 1);
+      return;
+    }
+    if (!allPromptsIn) return;
+    if (!completedRef.current && allPrompts.length > 0) {
       completedRef.current = true;
       onCompleteRef.current?.();
     }
-  }, [promptIdx, allPrompts.length]);
+  }, [promptIdx, allPrompts.length, allPromptsIn]);
+
+  const enoughAnswers =
+    MODELS.filter((m) => {
+      const r = repliesByModel.get(m.id);
+      return Boolean(r && (r.response || r.failed));
+    }).length >= 2;
 
   useEffect(() => {
     if (!currentPromptText) return;
-    const id = window.setTimeout(advance, MAX_PER_QUESTION_MS);
+    const wait = enoughAnswers ? 10000 : 28000;
+    const id = window.setTimeout(finishOrAdvance, wait);
     return () => window.clearTimeout(id);
-  }, [currentPromptText, advance]);
+  }, [currentPromptText, finishOrAdvance, enoughAnswers]);
 
   useEffect(() => {
     if (!allSettled) return;
-    const id = window.setTimeout(advance, READ_AFTER_ANSWERS_MS);
+    const id = window.setTimeout(finishOrAdvance, HOLD_AFTER_ANSWERS_MS);
     return () => window.clearTimeout(id);
-  }, [allSettled, advance]);
+  }, [allSettled, finishOrAdvance]);
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col gap-2">
+      {allPrompts.length > 0 ? (
+        <div className="flex shrink-0 items-center justify-between gap-3 text-[11px] font-semibold text-zinc-500">
+          <span className="tabular-nums">
+            Asking AIs {Math.min(promptIdx + 1, allPrompts.length)} of {Math.max(expected, allPrompts.length)}
+          </span>
+          <span className="min-w-0 truncate text-zinc-400">{currentPromptText}</span>
+        </div>
+      ) : (
+        <p className="shrink-0 text-[11px] font-semibold text-zinc-400">Writing buyer questions for ChatGPT, Claude, Gemini and Grok…</p>
+      )}
 
       <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-none gap-2 overflow-y-auto overscroll-contain sm:grid-cols-2 sm:grid-rows-2 sm:overflow-hidden">
         {MODELS.map((model) => {

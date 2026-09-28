@@ -17,7 +17,7 @@ import (
 	"visora-backend/internal/llm"
 )
 
-const maxGeoPrompts = 4
+const maxGeoPrompts = 5
 
 var (
 	reMarkdownHeading = regexp.MustCompile(`^#{1,6}\s*`)
@@ -169,17 +169,12 @@ func intentToGeoPrompt(keyword string) string {
 	if keyword == "" {
 		return keyword
 	}
-	lower := strings.ToLower(keyword)
-	if strings.HasPrefix(lower, "what ") || strings.HasPrefix(lower, "how ") ||
-		strings.HasPrefix(lower, "which ") || strings.Contains(keyword, "?") {
-		return keyword
-	}
-	return fmt.Sprintf("What are the best options for %s?", keyword)
+	return fmt.Sprintf("Which brands or companies are best for %s? Name companies, not products.", keyword)
 }
 
 func geoUserMessage(question string) string {
 	q := strings.TrimSpace(question)
-	return q + "\n\nReply in under 80 words. Name at most 4 options as plain lines starting with - . No markdown stars or headings."
+	return q + "\n\nReply in under 70 words. List 4-6 COMPANY or BRAND names a shopper could buy from, not products or snack items. Plain lines: - Brand — one short reason. No markdown stars or headings."
 }
 
 func trimGeoAnswer(text string) string {

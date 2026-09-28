@@ -134,8 +134,8 @@ export function ScanClient({
     const waitMs =
       step === 1 ? (healthDone ? 300 : 45000) :
       step === 2 ? 8000 :
-      step === 3 ? (googleDone ? 3000 : 32000) :
-      step === 4 ? (aiDone ? 1500 : 80000) :
+      step === 3 ? (googleDone ? 500 : 240000) :
+      step === 4 ? (aiDone ? 400 : 240000) :
       rivalsChecked ? 9000 : 45000;
     const from = step;
     const id = window.setTimeout(() => {
@@ -316,7 +316,14 @@ function buildSubtasks(
   }
 
   if (step === 3) {
-    return [{ label: "Searching Google like a buyer", done: false }];
+    const checks = scan.serpChecks.filter((c) => c.query);
+    if (checks.length === 0) {
+      return [{ label: "Searching Google like a buyer", done: false }];
+    }
+    return checks.slice(0, 10).map((c) => ({
+      label: c.query,
+      done: (c.results?.length ?? 0) > 0 || c.queriesChecked > 0,
+    }));
   }
 
   if (step === 5) {
@@ -353,17 +360,21 @@ function buildSubtasks(
   }
 
   if (step === 4) {
-    const replies = scan.geoReplies.filter((r) => r.response && !r.failed);
-    const models = ["ChatGPT", "Claude", "Gemini", "Grok"] as const;
-    const aliases = [["chatgpt", "gpt"], ["claude"], ["gemini"], ["grok", "xai", "perplexity", "sonar"]];
-    return models.map((name, index) => {
-      const done = replies.some((r) => aliases[index].some((a) => r.model.includes(a)));
-      return {
-        label: `Asking ${name}`,
-        detail: done ? "✓" : undefined,
-        done,
-      };
-    });
+    const prompts: string[] = [];
+    for (const p of scan.geoPrompts) {
+      const t = p.prompt?.trim();
+      if (t && !prompts.some((u) => u.toLowerCase() === t.toLowerCase())) prompts.push(t);
+    }
+    if (prompts.length === 0) {
+      return [{ label: "Writing questions for ChatGPT, Claude, Gemini and Grok", done: false }];
+    }
+    const answered = new Set(
+      scan.geoReplies.filter((r) => r.response && !r.failed).map((r) => r.prompt),
+    );
+    return prompts.map((p) => ({
+      label: p.length > 48 ? `${p.slice(0, 46)}…` : p,
+      done: answered.has(p),
+    }));
   }
 
   return [{ label: domain, done: true }];

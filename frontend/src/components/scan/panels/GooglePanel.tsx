@@ -82,13 +82,13 @@ export function GooglePanel({
   const results = (active?.results ?? []).slice(0, MAX_RESULTS);
   const typed = useTypewriter(query, phase === "typing");
 
-  const expected = Math.max(
-    scanNumber(values ?? {}, "intents_count") ?? 0,
-    scanStringList(values ?? {}, "keywords").length,
-    ...playlist.map((c) => c.queriesChecked || 0),
-    playlist.length,
-  );
-  const allQueriesIn = expected > 0 && playlist.length >= expected;
+  const declared =
+    scanNumber(values ?? {}, "intents_count") ??
+    scanStringList(values ?? {}, "keywords").length;
+  const allQueriesIn = declared > 0 && playlist.length >= declared;
+
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   // Start typing on each new query — keep a natural typing pace.
   useEffect(() => {
@@ -139,22 +139,23 @@ export function GooglePanel({
     return () => window.clearTimeout(id);
   }, [phase, active, query]);
 
-  // Move to next query. Stay here until every search has arrived and been shown.
+  // Move to the next query one at a time. Never finish until every declared
+  // search has arrived and been shown — and never skip a query by leaving
+  // phase on "next" for an extra render.
   useEffect(() => {
     if (phase !== "next") return;
     const next = activeIdx + 1;
     if (next < playlist.length) {
+      setPhase("typing");
       setActiveIdx(next);
       return;
     }
-    if (!allQueriesIn) {
-      return;
-    }
+    if (!allQueriesIn) return;
     if (!completedRef.current && playlist.length > 0) {
       completedRef.current = true;
-      onComplete?.();
+      onCompleteRef.current?.();
     }
-  }, [phase, activeIdx, playlist.length, allQueriesIn, onComplete]);
+  }, [phase, activeIdx, playlist.length, allQueriesIn]);
 
   const found = Boolean(active?.foundInTop50 && (active?.brandPosition ?? 0) > 0);
   const brandPos = active?.brandPosition ?? 0;
@@ -178,7 +179,7 @@ export function GooglePanel({
       {playlist.length > 0 ? (
         <div className="flex shrink-0 items-center justify-between gap-3 text-[11px] font-semibold text-zinc-500">
           <span className="tabular-nums">
-            Search {Math.min(activeIdx + 1, playlist.length)} of {Math.max(expected, playlist.length)}
+            Search {Math.min(activeIdx + 1, Math.max(playlist.length, 1))} of {Math.max(declared, playlist.length)}
           </span>
           <span className="min-w-0 truncate text-zinc-400">{query}</span>
         </div>

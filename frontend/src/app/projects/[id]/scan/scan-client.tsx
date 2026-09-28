@@ -129,13 +129,14 @@ export function ScanClient({
   // Play every chapter in order. Backend stage must not skip AI answers.
   useEffect(() => {
     if (step >= 6) return;
-    // Panels report when their animation finished; the long values are only a
-    // safety net so a stalled stream can't freeze the journey.
+    // Google and AI chapters only advance when the panel has played every item.
+    if (step === 3 && !googleDone) return;
+    if (step === 4 && !aiDone) return;
     const waitMs =
       step === 1 ? (healthDone ? 300 : 45000) :
       step === 2 ? 8000 :
-      step === 3 ? (googleDone ? 500 : 240000) :
-      step === 4 ? (aiDone ? 400 : 240000) :
+      step === 3 ? 400 :
+      step === 4 ? 400 :
       rivalsChecked ? 9000 : 45000;
     const from = step;
     const id = window.setTimeout(() => {

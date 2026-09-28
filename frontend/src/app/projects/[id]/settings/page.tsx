@@ -21,6 +21,9 @@ export default async function SettingsPage({ params }: { params: Promise<{ id: s
     { label: "Created", value: formatDate(project.createdAt) },
     { label: "Pages stored", value: String(summary?.counts.pages ?? 0) },
     { label: "Tracked keywords", value: String(summary?.counts.keywords ?? 0) },
+    ...(project.positioning
+      ? [{ label: "Positioning", value: project.positioning }]
+      : []),
   ];
 
   return (

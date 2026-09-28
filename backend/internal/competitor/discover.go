@@ -164,6 +164,10 @@ func classifyWithLLM(projectID uint, domains []string) (map[string]classifyVerdi
 
 	var b strings.Builder
 	fmt.Fprintf(&b, "Our site: %s (%s)\nCategory: %s\n", project.Website, project.Brand, project.Category)
+	if pos := strings.TrimSpace(project.Positioning); pos != "" {
+		fmt.Fprintf(&b, "Client positioning (classify competitors against this position, not the generic category): %s\n", pos)
+		fmt.Fprintf(&b, "A site that sells generic/bulk %s is NOT a competitor if our positioning is \"%s\".\n", project.Category, pos)
+	}
 	if strings.TrimSpace(project.ProfileData) != "" {
 		fmt.Fprintf(&b, "Our brand profile: %s\n", truncateText(project.ProfileData, 1200))
 	}
@@ -180,8 +184,8 @@ func classifyWithLLM(projectID uint, domains []string) (map[string]classifyVerdi
 	raw, err := llm.CompleteJSON(context.Background(), llm.GetModel(), []openai.ChatCompletionMessage{
 		{
 			Role: openai.ChatMessageRoleSystem,
-			Content: "You classify search competitors. A competitor sells something a buyer could choose INSTEAD of our site. " +
-				"Directories, forums, Q&A sites, social networks, generic news and dictionary pages are not competitors. Reply with JSON only.",
+			Content: "You classify search competitors. A competitor sells something a buyer could choose INSTEAD of our site, for the client's declared positioning when one is given. " +
+				"Directories, forums, Q&A sites, social networks, generic news and dictionary pages are not competitors. A bulk/generic seller in the same broad category is not a competitor of a niche position. Reply with JSON only.",
 		},
 		{
 			Role: openai.ChatMessageRoleUser,

@@ -38,6 +38,7 @@ export async function createProjectAction(formData: FormData): Promise<{ error?:
   const maxPagesRaw = String(formData.get("max_pages") ?? "").trim();
   const maxPages = Number.parseInt(maxPagesRaw, 10);
   const sitemapUrl = String(formData.get("sitemap_url") ?? "").trim();
+  const positioning = String(formData.get("positioning") ?? "").trim();
 
   let projectId: string | number | undefined;
   let created = false;
@@ -50,6 +51,7 @@ export async function createProjectAction(formData: FormData): Promise<{ error?:
         website,
         ...(Number.isFinite(maxPages) && maxPages > 0 ? { max_pages: maxPages } : {}),
         ...(sitemapUrl ? { sitemap_url: sitemapUrl } : {}),
+        ...(positioning ? { positioning } : {}),
       }),
     });
 
@@ -81,6 +83,7 @@ export async function createProjectAction(formData: FormData): Promise<{ error?:
 /** After Google login: start a scan only when this account has no project yet. */
 export async function continueAfterLoginAction(
   website?: string,
+  positioning?: string,
 ): Promise<{ error?: string } | undefined> {
   try {
     await requireUser();
@@ -116,6 +119,9 @@ export async function continueAfterLoginAction(
 
   const formData = new FormData();
   formData.append("website", trimmed);
+  if (positioning?.trim()) {
+    formData.append("positioning", positioning.trim());
+  }
   return createProjectAction(formData);
 }
 
@@ -168,7 +174,7 @@ export async function exportFixAction(projectId: string | number, fixId: number)
 
 export async function updateSettingsAction(
   projectId: string | number,
-  values: { brand?: string; website?: string; category?: string; country?: string; competitors?: string[] }
+  values: { brand?: string; website?: string; category?: string; country?: string; competitors?: string[]; positioning?: string }
 ) {
   try {
     // The backend stores competitors as a JSON string in a jsonb column.

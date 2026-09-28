@@ -75,6 +75,9 @@ func GenerateForProject(projectID uint) error {
 				searchLine += "\nWHAT RANKS NOW (beat this, do not copy it):\n" + rival + "\n"
 			}
 		}
+		if pos := strings.TrimSpace(project.Positioning); pos != "" {
+			searchLine += fmt.Sprintf("\nClient positioning (must appear in the new copy): %s\nIf the page does not already use these words, ADD them. Do not invent products the page does not sell.\n", pos)
+		}
 		draft := ""
 		if d := strings.TrimSpace(meta.After); d != "" {
 			draft = "\nStrategist's rough draft (improve it, do not paste it blindly):\n" + d + "\n"

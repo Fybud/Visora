@@ -22,6 +22,14 @@ async function triggerScan(projectId: string) {
   if (!res.ok) throw new Error(`Scan trigger failed (${res.status})`);
 }
 
+async function triggerIntentRerun(projectId: string) {
+  const res = await fetch(`${PUBLIC_API_BASE}/projects/${projectId}/scan/from-intents`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error(`Search re-run failed (${res.status})`);
+}
+
 async function hasActiveJobs(projectId: string): Promise<boolean> {
   const live = await apiGetData<Record<string, unknown>>(
     `/projects/${projectId}/live-status`,
@@ -38,19 +46,23 @@ async function hasActiveJobs(projectId: string): Promise<boolean> {
 export function ScanClient({
   projectId,
   domain,
+  positioning,
   initialSummary,
 }: {
   projectId: string;
   domain: string;
+  /** Optional north-star positioning — shown as "Aiming at: …" in the scan header. */
+  positioning?: string;
   initialSummary: ProjectSummary | null;
 }) {
   const searchParams = useSearchParams();
   const forceRerun = searchParams.get("rerun") === "1";
-  const bootKey = searchParams.get("t") ?? (forceRerun ? "rerun" : "open");
+  const fromIntents = searchParams.get("from") === "intents";
+  const bootKey = searchParams.get("t") ?? (fromIntents ? "intents" : forceRerun ? "rerun" : "open");
 
   const [streamReady, setStreamReady] = useState(false);
   const [bootError, setBootError] = useState<string | null>(null);
-  const [step, setStep] = useState<JourneyStepId>(1);
+  const [step, setStep] = useState<JourneyStepId>(fromIntents ? 3 : 1);
   const [healthDone, setHealthDone] = useState(false);
   const [googleDone, setGoogleDone] = useState(false);
   const [aiDone, setAiDone] = useState(false);
@@ -66,16 +78,20 @@ export function ScanClient({
     let cancelled = false;
     setStreamReady(false);
     setBootError(null);
-    setStep(1);
+    setStep(fromIntents ? 3 : 1);
     setHealthDone(false);
     setGoogleDone(false);
     setAiDone(false);
 
     (async () => {
       try {
-        const alreadyRunning = forceRerun ? false : await hasActiveJobs(projectId);
+        const alreadyRunning = forceRerun || fromIntents ? false : await hasActiveJobs(projectId);
         if (!alreadyRunning) {
-          await triggerScan(projectId);
+          if (fromIntents) {
+            await triggerIntentRerun(projectId);
+          } else {
+            await triggerScan(projectId);
+          }
         }
         if (cancelled) return;
         setBootError(null);
@@ -91,7 +107,7 @@ export function ScanClient({
     return () => {
       cancelled = true;
     };
-  }, [projectId, forceRerun, bootKey]);
+  }, [projectId, forceRerun, fromIntents, bootKey]);
 
   useEffect(() => {
     if (!scan.finished) return;
@@ -165,6 +181,7 @@ export function ScanClient({
   return (
     <ScanExperience
       domain={domain}
+      positioning={positioning}
       step={step}
       finished={scan.finished}
       running={scan.running || (!streamReady && !bootError)}

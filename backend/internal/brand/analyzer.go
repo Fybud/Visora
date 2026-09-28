@@ -43,6 +43,9 @@ func Analyze(projectID uint) error {
 
 	var b strings.Builder
 	fmt.Fprintf(&b, "Website: %s\nCountry: %s\n\n", project.Website, project.Country)
+	if p := strings.TrimSpace(project.Positioning); p != "" {
+		fmt.Fprintf(&b, "Client positioning (must obey — category, audience and search queries must serve this first): %s\n\n", p)
+	}
 	used := 0
 	for i := range pages {
 		if used >= 12 || crawler.IsBoilerplatePage(pages[i].URL) {
@@ -56,11 +59,20 @@ func Analyze(projectID uint) error {
 		used++
 	}
 
+	systemPrompt := "You are a brand analyst. Read the crawled pages and describe what this business actually sells, " +
+		"to whom, and why buyers pick it. Use only facts from the pages. Reply with JSON only."
+	if p := strings.TrimSpace(project.Positioning); p != "" {
+		systemPrompt = "You are a brand analyst. The client has declared their positioning: \"" + p + "\". " +
+			"Your job is to describe the brand through that positioning lens. " +
+			"category must reflect the positioning (e.g. \"evening sacks\", not \"sacks\"). " +
+			"target_audience and search_queries must serve the declared positioning first. " +
+			"Use only products/facts found on the crawled pages. Reply with JSON only."
+	}
+
 	raw, err := llm.CompleteJSON(context.Background(), llm.GetModel(), []openai.ChatCompletionMessage{
 		{
-			Role: openai.ChatMessageRoleSystem,
-			Content: "You are a brand analyst. Read the crawled pages and describe what this business actually sells, " +
-				"to whom, and why buyers pick it. Use only facts from the pages. Reply with JSON only.",
+			Role:    openai.ChatMessageRoleSystem,
+			Content: systemPrompt,
 		},
 		{
 			Role: openai.ChatMessageRoleUser,
@@ -125,3 +137,4 @@ func persistProfile(projectID uint, project *db.Project, profile BrandProfile) e
 
 	return nil
 }
+

@@ -208,6 +208,8 @@ export type ApiProject = {
   country: string;
   status: string;
   createdAt: string | null;
+  /** Optional north-star positioning sentence set by the client at intake. */
+  positioning: string;
 };
 
 export function normalizeProject(raw: unknown): ApiProject | null {
@@ -226,6 +228,7 @@ export function normalizeProject(raw: unknown): ApiProject | null {
     country: pickString(raw, "country", "Country") ?? "India",
     status: pickString(raw, "status", "Status") ?? "active",
     createdAt: pickString(raw, "createdAt", "CreatedAt"),
+    positioning: pickString(raw, "positioning", "Positioning") ?? "",
   };
 }
 

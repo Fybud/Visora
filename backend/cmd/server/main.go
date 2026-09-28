@@ -83,6 +83,7 @@ func main() {
 
 		// Intelligence & Scan
 		apiGroup.POST("/projects/:id/scan", api.TriggerFullScan)
+		apiGroup.POST("/projects/:id/scan/from-intents", api.TriggerIntentRerun)
 		apiGroup.GET("/projects/:id/scan-stream", api.StreamScanEvents)
 		apiGroup.GET("/projects/:id/search-intents", api.GetSearchIntents)
 		apiGroup.GET("/projects/:id/search-intents/:intentId", api.GetSearchIntentDetail)

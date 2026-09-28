@@ -37,7 +37,7 @@ export default function LandingPage() {
         <div className="mt-11 w-full max-w-2xl">
           <DomainIntake cta="See where you show up" />
           <p className="mt-4 text-xs font-medium text-zinc-400">
-            Just your website. Takes a couple of minutes.
+            Your website, plus how you want to be known if that is not obvious from the site. A couple of minutes.
           </p>
         </div>
 

@@ -19,6 +19,10 @@ type Project struct {
 	Website     string    `gorm:"not null"`
 	Category    string    `gorm:"not null"`
 	Country     string    `gorm:"not null;default:'India'"`
+	// Positioning is the optional north-star sentence the client supplies on
+	// first scan (e.g. "Evening sacks for Indian wedding guests"). Every AI
+	// step must obey it; blank means infer everything from the crawl.
+	Positioning string    `gorm:"not null;default:''"`
 	UserEmail   string    `gorm:"index"`
 	Competitors string    `gorm:"type:jsonb;not null;default:'[]'"`
 	ProfileData string    `gorm:"type:jsonb;default:'{}'"`

@@ -15,7 +15,15 @@ function rememberWebsite(website: string) {
   sessionStorage.setItem("pending_website", website);
 }
 
-/** Landing intake — remembers the URL, then login starts the first scan. */
+function rememberPositioning(positioning: string) {
+  if (positioning) {
+    sessionStorage.setItem("pending_positioning", positioning);
+  } else {
+    sessionStorage.removeItem("pending_positioning");
+  }
+}
+
+/** Landing intake — remembers the URL and optional positioning, then login starts the first scan. */
 export function DomainIntake({
   cta = "See where you show up",
   compact = false,
@@ -25,10 +33,11 @@ export function DomainIntake({
 }) {
   const { openAuthModal } = useAuthModal();
   const [url, setUrl] = useState("");
+  const [positioning, setPositioning] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const submitWebsite = async (raw: string) => {
+  const submitWebsite = async (raw: string, pos: string) => {
     setIsLoading(true);
     setError("");
     try {
@@ -37,9 +46,13 @@ export function DomainIntake({
         website = `https://${website}`;
       }
       rememberWebsite(website);
+      rememberPositioning(pos.trim());
 
       const formData = new FormData();
       formData.append("website", website);
+      if (pos.trim()) {
+        formData.append("positioning", pos.trim());
+      }
 
       const { createProjectAction } = await import("@/app/actions");
       const result = await createProjectAction(formData);
@@ -58,6 +71,7 @@ export function DomainIntake({
       if (message.includes("NEXT_REDIRECT")) throw err;
       if (isAuthError(message)) {
         rememberWebsite(raw.trim());
+        rememberPositioning(positioning.trim());
         openAuthModal(afterLoginUrl());
         setIsLoading(false);
         return;
@@ -69,7 +83,7 @@ export function DomainIntake({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await submitWebsite(url);
+    await submitWebsite(url, positioning);
   };
 
   return (
@@ -96,6 +110,26 @@ export function DomainIntake({
           {isLoading ? "Opening…" : cta}
         </button>
       </div>
+
+      {/* Optional positioning line — the north star for the scan */}
+      <div className="mt-3">
+        <input
+          id="positioning"
+          name="positioning"
+          type="text"
+          inputMode="text"
+          placeholder='How should we talk about you? e.g. "Evening sacks for Indian wedding guests"'
+          value={positioning}
+          onChange={(e) => setPositioning(e.target.value)}
+          disabled={isLoading}
+          className="w-full border border-[var(--line)] bg-white/60 px-5 py-3 text-sm font-medium text-[var(--ink)] shadow-[0_1px_0_rgba(15,15,14,0.04)] outline-none transition placeholder:text-zinc-400 focus:border-[var(--ink)] focus:bg-white disabled:opacity-60"
+        />
+        <p className="mt-1.5 text-xs text-zinc-400">
+          <span className="font-semibold text-zinc-500">Optional.</span>{" "}
+          Skip it and we infer from the site. Fill it and every search, AI question, and recommendation is tailored to that position.
+        </p>
+      </div>
+
       {error ? (
         <p className="mt-3 border border-[var(--rust)] bg-[var(--rust-soft)] px-3 py-2 text-sm font-medium text-[var(--ink)]">
           {error}

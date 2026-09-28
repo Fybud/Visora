@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"visora-backend/internal/competitor"
@@ -186,6 +187,7 @@ type UpdateProjectInput struct {
 	Category    *string `json:"category"`
 	Country     *string `json:"country"`
 	Competitors *string `json:"competitors"`
+	Positioning *string `json:"positioning"`
 }
 
 // UpdateProject persists edits made in the settings screen. GORM is handed a map
@@ -223,6 +225,9 @@ func UpdateProject(c *gin.Context) {
 	}
 	if input.Competitors != nil {
 		updates["competitors"] = *input.Competitors
+	}
+	if input.Positioning != nil {
+		updates["positioning"] = strings.TrimSpace(*input.Positioning)
 	}
 
 	if len(updates) == 0 {

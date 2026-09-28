@@ -45,6 +45,11 @@ func GetProject(c *gin.Context) {
 
 type CreateProjectInput struct {
 	Website string `json:"website" binding:"required"`
+	// Positioning is the optional north-star sentence the client provides
+	// (e.g. "Evening sacks for Indian wedding guests"). It is stored on the
+	// project and threaded through brand, search-intent, GEO, competitor, and
+	// recommendation AI calls so every step serves that positioning first.
+	Positioning string `json:"positioning"`
 	// MaxPages and SitemapURL come from the advanced options on the onboarding
 	// screen. They are applied to the first crawl of the project.
 	MaxPages   int    `json:"max_pages"`
@@ -96,6 +101,7 @@ func CreateProject(c *gin.Context) {
 		Website:     input.Website,
 		Category:    "Unknown",
 		Country:     "India",
+		Positioning: strings.TrimSpace(input.Positioning),
 		UserEmail:   userEmail,
 		Competitors: "[]",
 		ProfileData: "{}",

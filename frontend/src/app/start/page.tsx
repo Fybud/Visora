@@ -9,11 +9,13 @@ export default function StartPage() {
   useEffect(() => {
     const pending = sessionStorage.getItem("pending_website") ?? "";
     sessionStorage.removeItem("pending_website");
+    const pendingPos = sessionStorage.getItem("pending_positioning") ?? "";
+    sessionStorage.removeItem("pending_positioning");
 
     void (async () => {
       try {
         const { continueAfterLoginAction } = await import("@/app/actions");
-        const result = await continueAfterLoginAction(pending);
+        const result = await continueAfterLoginAction(pending, pendingPos);
         if (result?.error) setError(result.error);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "";

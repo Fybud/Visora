@@ -69,6 +69,9 @@ func Compare(projectID uint) error {
 
 	var b strings.Builder
 	fmt.Fprintf(&b, "BRAND: %s (%s)\n%s\n\n", project.Brand, project.Website, crawler.PageOutline(brandPage, 2500))
+	if pos := strings.TrimSpace(project.Positioning); pos != "" {
+		fmt.Fprintf(&b, "CLIENT POSITIONING (judge the gap against this, not a generic category): %s\n\n", pos)
+	}
 	for _, s := range snaps {
 		fmt.Fprintf(&b, "RIVAL: %s\n%s\n\n", s.Domain, crawler.PageOutline(s.Page, 1200))
 	}

@@ -12,6 +12,7 @@ type Subtask = { label: string; detail?: string; done?: boolean };
 
 export function ScanExperience({
   domain,
+  positioning,
   step,
   finished,
   running,
@@ -23,6 +24,8 @@ export function ScanExperience({
   children,
 }: {
   domain: string;
+  /** Optional north-star positioning sentence — shown as "Aiming at: …" in the header. */
+  positioning?: string;
   step: JourneyStepId;
   finished: boolean;
   running: boolean;
@@ -56,6 +59,12 @@ export function ScanExperience({
             <div className="truncate text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-400">
               {domain}
             </div>
+            {positioning ? (
+              <div className="mt-0.5 flex items-center gap-1.5 truncate">
+                <span className="shrink-0 text-[9px] font-black uppercase tracking-[0.12em] text-[var(--rust)]">Aiming at</span>
+                <span className="truncate text-[10px] font-semibold text-zinc-600" title={positioning}>{positioning}</span>
+              </div>
+            ) : null}
           </div>
         </div>
         <span

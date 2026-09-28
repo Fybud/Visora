@@ -115,6 +115,7 @@ func generateFromLLM(project db.Project) ([]GeneratedIntent, error) {
 	if country == "" {
 		country = "the site's home market"
 	}
+	positioning := strings.TrimSpace(project.Positioning)
 
 	var suggested []string
 	for _, q := range profile.SearchQueries {
@@ -135,6 +136,18 @@ func generateFromLLM(project db.Project) ([]GeneratedIntent, error) {
 		}
 	}
 
+	positioningSection := ""
+	positioningInstruction := ""
+	if positioning != "" {
+		positioningSection = fmt.Sprintf("\nClient positioning (north star — queries MUST serve this first): %s\n", positioning)
+		positioningInstruction = fmt.Sprintf(
+			"\nIMPORTANT: At least half the queries must directly serve the positioning \"%s\". "+
+				"These are the highest-priority queries. The remaining queries can be broader category searches, "+
+				"but never generic brand-only terms.",
+			positioning,
+		)
+	}
+
 	prompt := fmt.Sprintf(`You are a search-intent strategist.
 
 Brand: %s
@@ -144,19 +157,20 @@ Market: %s
 Products: %v
 Topics: %v
 Audience: %s
-Searches the brand analyst suggested: %v
+Searches the brand analyst suggested: %v%s
 
 What the site says:
 %s
-Write 8-10 Google searches a real buyer in %s would type to FIND WHAT THIS SITE SELLS, before they know the brand.
-Never the brand or domain alone. Prefer commercial / transactional searches. Only add a place, platform or audience
-modifier when the pages above show it matters to this business.
+Write 8-10 Google searches a real buyer in %s would type to FIND THIS SITE under the positioning above, before they know the brand.
+Never the brand or domain alone. Prefer commercial / transactional searches.
+When a positioning sentence is set, use its words even if the crawled pages do not yet say them — those are the searches the client wants to win.
+Only skip a place/audience modifier when no positioning was given and the pages do not show it.%s
 
 Return ONLY a JSON object with this exact shape:
 {"intents":[{"keyword":"...","intent":"commercial","source":"product","priority":1}]}
 
 Keys must be "intents" and "keyword" (not "queries" / "query"). No markdown, no extra text.`,
-		brandName, project.Website, category, country, products, topics, audience, suggested, pagesText.String(), country)
+		brandName, project.Website, category, country, products, topics, audience, suggested, positioningSection, pagesText.String(), country, positioningInstruction)
 
 	raw, err := llm.CompleteJSON(context.Background(), llm.GetModel(), []openai.ChatCompletionMessage{
 		{Role: openai.ChatMessageRoleUser, Content: prompt},
@@ -171,6 +185,7 @@ Keys must be "intents" and "keyword" (not "queries" / "query"). No markdown, no 
 	}
 	return parsed, nil
 }
+
 
 func parseLooseIntents(raw string) []GeneratedIntent {
 	var list looseList

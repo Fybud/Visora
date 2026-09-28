@@ -25,7 +25,7 @@ export default async function ScanPage({ params }: { params: Promise<{ id: strin
         </div>
       }
     >
-      <ScanClient projectId={id} domain={project.domain} initialSummary={summary} />
+      <ScanClient projectId={id} domain={project.domain} positioning={project.positioning} initialSummary={summary} />
     </Suspense>
   );
 }

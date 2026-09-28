@@ -185,6 +185,19 @@ func Generate(projectID uint) error {
 }
 
 func generateFromLLM(project db.Project, brief string) ([]aiRecommendation, error) {
+	positioningLine := ""
+	positioningRules := ""
+	if pos := strings.TrimSpace(project.Positioning); pos != "" {
+		positioningLine = fmt.Sprintf("Client positioning (north star): %s", pos)
+		positioningRules = fmt.Sprintf(`
+Positioning rules (obey these above all else):
+- Every title, H1, meta, and body fix should use the positioning words: "%s".
+- If the crawled pages do NOT yet contain these words, write a fix that ADDS them to the closest real page.
+  Never pretend the homepage already says them when it does not.
+- Invent no new products. Use only product names and features found in the crawled copy.
+- A fix that ignores the positioning is worse than no fix.`, pos)
+	}
+
 	prompt := fmt.Sprintf(`You are a senior SEO + GEO (AI-search) strategist.
 Using ONLY the evidence below, write the edits that will most move this site up on Google and get it named by ChatGPT/Claude/Gemini.
 
@@ -192,7 +205,7 @@ Brand: %s
 Website: %s
 Category: %s
 Country: %s
-
+%s
 EVIDENCE:
 %s
 
@@ -201,7 +214,7 @@ How to think:
 2. For each lost search in HEAD-TO-HEAD, see what the rival page says that ours does not (the words in its title/H1, the use case it answers, proof, FAQs) and close that gap on OUR closest page.
 3. For AI answers that named other brands, add the entity facts an AI needs to recommend us: a plain "Brand is a <category> for <audience> that <does X>" line, concrete features, pricing/plans if on the site, comparison vs the brands named, and FAQ answers that mirror the buyer questions.
 4. Fix real technical issues only when they hurt a page that matters (never legal/privacy/terms/login pages).
-
+%s
 Rules:
 - Every item must name its evidence in "detail" (e.g. "rival.com ranks #2 with 'X' in its title; our /page title has no mention of X").
 - page_url must be a URL from "Crawled page copy" or "Our closest page". Never invent paths, never legal pages.
@@ -214,7 +227,7 @@ Rules:
 
 Return ONLY JSON:
 {"recommendations":[{"source":"search_visibility","severity":"high","title":"...","detail":"...","action":"...","page_url":"...","target_field":"title","before":"...","after":"..."}]}`,
-		project.Brand, project.Website, project.Category, project.Country, brief)
+		project.Brand, project.Website, project.Category, project.Country, positioningLine, brief, positioningRules)
 
 	messages := []openai.ChatCompletionMessage{
 		{
@@ -369,6 +382,11 @@ func firstNonEmptyStr(vals ...string) string {
 func buildEvidenceBrief(project db.Project) string {
 	var b strings.Builder
 	projectID := project.ID
+
+	// Lead with the north star so every following piece of evidence is read through that lens.
+	if pos := strings.TrimSpace(project.Positioning); pos != "" {
+		fmt.Fprintf(&b, "Client positioning (north star — all fixes must serve this): %s\n\n", pos)
+	}
 
 	groups, _, _ := seo.SummarizeIssues(projectID)
 	fmt.Fprintf(&b, "SEO issues (with example pages):\n")

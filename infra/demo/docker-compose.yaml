@@ -4,7 +4,7 @@ name: visora-demo
 
 services:
   api-server:
-    image: fiberai/visora-api:${IMAGE_TAG:-latest}
+    image: fybud/visora-api:${IMAGE_TAG:-latest}
     command: ["server"]
     restart: unless-stopped
     env_file: [.env]
@@ -23,7 +23,7 @@ services:
     networks: [fybud-net]
 
   worker:
-    image: fiberai/visora-api:${IMAGE_TAG:-latest}
+    image: fybud/visora-api:${IMAGE_TAG:-latest}
     command: ["worker"]
     restart: unless-stopped
     env_file: [.env]
@@ -33,7 +33,7 @@ services:
     networks: [fybud-net]
 
   frontend:
-    image: fiberai/visora-web:${IMAGE_TAG:-latest}
+    image: fybud/visora-web:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       API_BASE_URL: http://api-server:8080/api

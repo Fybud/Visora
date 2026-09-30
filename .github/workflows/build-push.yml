@@ -1,7 +1,7 @@
 name: build-push
 
 # Build Visora images on GitHub-hosted runners, push to Docker Hub,
-# then notify FiberAI Deploy to redeploy approved tenants.
+# then notify fybud Deploy to redeploy approved tenants.
 # The VPS never builds images. api-server and worker share one image.
 # The web image is tenant-agnostic: browser code derives the API origin
 # from the tenant hostname at runtime.
@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 env:
-  DOCKERHUB_ORG: fiberai
+  DOCKERHUB_ORG: fybud
   TOOL: visora
 
 jobs:
@@ -62,7 +62,7 @@ jobs:
     if: success()
     runs-on: ubuntu-latest
     steps:
-      - name: Notify FiberAI Deploy
+      - name: Notify fybud Deploy
         env:
           DEPLOY_WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
           DEPLOY_WEBHOOK_SECRET: ${{ secrets.DEPLOY_WEBHOOK_SECRET }}

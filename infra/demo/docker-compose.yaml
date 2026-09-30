@@ -1,0 +1,53 @@
+# Visora — demo tenant (image-only).
+# Domains: visora.fybud.com / api.visora.fybud.com
+# Shared Postgres: user=password=visora-demo
+# Nginx: infra/demo/nginx/visora.fybud.com.conf (installed on first deploy).
+# api-server and worker share fiberai/visora-api (different command).
+
+name: visora-demo
+
+services:
+  api-server:
+    image: fiberai/visora-api:${IMAGE_TAG:-latest}
+    command: ["server"]
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required}
+      FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL required}
+      API_BASE_EXTERNAL: ${API_BASE_EXTERNAL:?API_BASE_EXTERNAL required}
+    ports:
+      - "127.0.0.1:${API_HOST_PORT:-4500}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/api/health >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks: [fiberai-net]
+
+  worker:
+    image: fiberai/visora-api:${IMAGE_TAG:-latest}
+    command: ["worker"]
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required}
+    depends_on: [api-server]
+    networks: [fiberai-net]
+
+  frontend:
+    image: fiberai/visora-web:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      # Runtime env for the Next standalone server (server components + /go-api proxy).
+      # Browser code derives the public API origin from the tenant host at runtime.
+      API_BASE_URL: http://api-server:8080/api
+    ports:
+      - "127.0.0.1:${WEB_HOST_PORT:-9500}:3000"
+    depends_on: [api-server]
+    networks: [fiberai-net]
+
+networks:
+  fiberai-net:
+    external: true

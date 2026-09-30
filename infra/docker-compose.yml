@@ -1,6 +1,5 @@
-﻿# Visora — demo. Shared Postgres: fybud-postgres on fybud-net (root docker-compose.db.yml).
-
-name: visora-demo
+# Visora — public frontend/api; worker private (no expose, no host ports).
+name: visora
 
 services:
   api-server:
@@ -13,7 +12,10 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL required}
       API_BASE_EXTERNAL: ${API_BASE_EXTERNAL:?API_BASE_EXTERNAL required}
     ports:
-      - "127.0.0.1:${API_HOST_PORT:-4500}:8080"
+      - "127.0.0.1:${API_HOST_PORT}:8080"
+    labels:
+      fybud.expose: "true"
+      fybud.domain: api.visora.fybud.com
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/api/health >/dev/null 2>&1 || exit 1"]
       interval: 15s
@@ -38,7 +40,10 @@ services:
     environment:
       API_BASE_URL: http://api-server:8080/api
     ports:
-      - "127.0.0.1:${WEB_HOST_PORT:-9500}:3000"
+      - "127.0.0.1:${WEB_HOST_PORT}:3000"
+    labels:
+      fybud.expose: "true"
+      fybud.domain: visora.fybud.com
     depends_on: [api-server]
     networks: [fybud-net]
 

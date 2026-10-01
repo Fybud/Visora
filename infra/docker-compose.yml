@@ -8,6 +8,15 @@ services:
     restart: unless-stopped
     env_file: [.env]
     environment:
+      # Paste in the Deploy UI (Settings → Tool specs → requiredEnv): empty value = "needs pasting".
+      JWT_SECRET:
+      GOOGLE_CLIENT_ID:
+      GOOGLE_CLIENT_SECRET:
+      OPENAI_API_KEY:
+      SERP_API_KEY:
+      # Optional — paste only if used (optionalEnv): TURNSTILE_SECRET_KEY, OPENAI_BASE_URL,
+      # VISORA_LLM_MODEL, GEO_OPENAI_API_KEY, WORKER_STUCK_MINUTES, WORKER_MAX_ATTEMPTS.
+      # Deploy-injected — never pasted.
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required}
       FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL required}
       API_BASE_EXTERNAL: ${API_BASE_EXTERNAL:?API_BASE_EXTERNAL required}
@@ -31,6 +40,10 @@ services:
     restart: unless-stopped
     env_file: [.env]
     environment:
+      # The worker runs the same geo/LLM jobs, so paste the same keys it reads.
+      OPENAI_API_KEY:
+      SERP_API_KEY:
+      # Deploy-injected — never pasted.
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required}
     depends_on: [api-server]
     networks: [fybud-net]

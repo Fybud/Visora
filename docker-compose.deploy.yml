@@ -8,25 +8,33 @@ services:
     restart: unless-stopped
     env_file: [.env]
     environment:
-      # Paste in the Deploy UI (Settings → Tool specs → requiredEnv): empty value = "needs pasting".
+      # Empty = paste in Deploy UI. Literal = fixed here. ${VAR:?…} = Deploy-injected.
       JWT_SECRET:
       GOOGLE_CLIENT_ID:
       GOOGLE_CLIENT_SECRET:
       OPENAI_API_KEY:
       SERP_API_KEY:
-      # Optional — paste only if used (optionalEnv): TURNSTILE_SECRET_KEY, OPENAI_BASE_URL,
-      # VISORA_LLM_MODEL, GEO_OPENAI_API_KEY, WORKER_STUCK_MINUTES, WORKER_MAX_ATTEMPTS.
+      TURNSTILE_SECRET_KEY:
+      OPENAI_BASE_URL:
+      VISORA_LLM_MODEL:
+      GEO_OPENAI_API_KEY:
+      WORKER_STUCK_MINUTES:
+      WORKER_MAX_ATTEMPTS:
       # Deploy-injected — never pasted.
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required}
       FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL required}
       API_BASE_EXTERNAL: ${API_BASE_EXTERNAL:?API_BASE_EXTERNAL required}
+      GIN_MODE: release
+      PORT: "8080"
     ports:
       - "127.0.0.1:${API_HOST_PORT}:8080"
     labels:
       fybud.expose: "true"
       fybud.domain: api.visora.fybud.com
+      fybud.role: api
       fybud.health: "/api/health"
     healthcheck:
+      # alpine image installs wget explicitly in the Dockerfile.
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/api/health >/dev/null 2>&1 || exit 1"]
       interval: 15s
       timeout: 5s
@@ -40,9 +48,13 @@ services:
     restart: unless-stopped
     env_file: [.env]
     environment:
-      # The worker runs the same geo/LLM jobs, so paste the same keys it reads.
       OPENAI_API_KEY:
       SERP_API_KEY:
+      OPENAI_BASE_URL:
+      VISORA_LLM_MODEL:
+      GEO_OPENAI_API_KEY:
+      WORKER_STUCK_MINUTES:
+      WORKER_MAX_ATTEMPTS:
       # Deploy-injected — never pasted.
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required}
     depends_on: [api-server]
@@ -52,13 +64,22 @@ services:
     image: fybud/visora-web:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
+      # In-cluster proxy to the API (not public). Host nginx fronts this container on :3000.
       API_BASE_URL: http://api-server:8080/api
+      PORT: "3000"
     ports:
       - "127.0.0.1:${WEB_HOST_PORT}:3000"
     labels:
       fybud.expose: "true"
       fybud.domain: visora.fybud.com
+      fybud.role: web
       fybud.health: "/"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     depends_on: [api-server]
     networks: [internal]
 

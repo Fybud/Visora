@@ -24,6 +24,9 @@ services:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required}
       FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL required}
       API_BASE_EXTERNAL: ${API_BASE_EXTERNAL:?API_BASE_EXTERNAL required}
+      # Literal: JWT is set on api.* and must be readable by the web host.
+      # Without this, Google OAuth succeeds then middleware bounces back to /.
+      COOKIE_DOMAIN: fybud.com
       GIN_MODE: release
       PORT: "8080"
     ports:

@@ -48,6 +48,7 @@ services:
     restart: unless-stopped
     env_file: [.env]
     environment:
+      # Same paste keys the worker process reads (mirrors api-server secrets it needs).
       OPENAI_API_KEY:
       SERP_API_KEY:
       OPENAI_BASE_URL:
@@ -73,13 +74,8 @@ services:
       fybud.expose: "true"
       fybud.domain: visora.fybud.com
       fybud.role: web
-      fybud.health: "/"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null 2>&1 || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
+      # Process-up only — Next standalone image has no wget; Deploy probes the host port.
+      fybud.health: "any"
     depends_on: [api-server]
     networks: [internal]
 

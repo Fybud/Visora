@@ -10,7 +10,11 @@ Thumbs.db
 # ── Environment files ─────────────────────────────────────────────────────────
 # Never commit real secrets — only commit template files
 .env
+.env.*
 .env.local
+.env.deploy
+!.env.example
+!.env.*.example
 !.env.production       # ← template files ARE committed (no real secrets in them)
 !backend/.env.production
 !frontend/.env.production

@@ -1,7 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PUBLIC_API_BASE, apiGetData, asArray, pick, pickNumber, pickString } from "@/lib/api";
+import {
+  PUBLIC_API_BASE,
+  apiGetData,
+  asArray,
+  pick,
+  pickNumber,
+  pickString,
+  publicApiOrigin,
+} from "@/lib/api";
 import {
   CompetitorSample,
   GeoModelReply,
@@ -320,9 +328,12 @@ export function useScanStream(projectId: string, enabled = true) {
     lastEventAt.current = Date.now();
     setSnapshot({ ...EMPTY, running: true });
 
+    // Hit the API host directly (cookie Domain=.fybud.com). Proxying SSE through
+    // Next `/go-api` + nginx buffering caused ERR_CONNECTION_RESET mid-scan.
     let source: EventSource | null = null;
     try {
-      source = new EventSource(`${PUBLIC_API_BASE}/projects/${projectId}/scan-stream`);
+      const streamUrl = `${publicApiOrigin()}/api/projects/${projectId}/scan-stream`;
+      source = new EventSource(streamUrl, { withCredentials: true });
     } catch {
       return;
     }

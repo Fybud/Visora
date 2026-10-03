@@ -105,9 +105,11 @@ func StreamScanEvents(c *gin.Context) {
 	id := c.Param("id")
 
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
-	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Cache-Control", "no-cache, no-transform")
 	c.Writer.Header().Set("Connection", "keep-alive")
 	c.Writer.Header().Set("X-Accel-Buffering", "no")
+	// Hint reverse proxies not to buffer the stream.
+	c.Writer.Header().Set("Transfer-Encoding", "chunked")
 
 	var latestCrawl db.CrawlRun
 	db.DB.Where("project_id = ? AND competitor_id IS NULL", id).Order("id desc").First(&latestCrawl)

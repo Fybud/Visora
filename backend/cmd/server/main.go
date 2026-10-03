@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"visora-backend/internal/api"
@@ -22,12 +23,14 @@ func main() {
 	// ── CORS ──────────────────────────────────────────────────────────────────
 	// Allow the frontend origin and credentials (cookies)
 	r.Use(func(c *gin.Context) {
-		frontendURL := os.Getenv("FRONTEND_URL")
+		frontendURL := strings.TrimRight(os.Getenv("FRONTEND_URL"), "/")
 		if frontendURL == "" {
 			frontendURL = "http://localhost:3000"
 		}
-		origin := c.Request.Header.Get("Origin")
-		if origin == frontendURL {
+		origin := strings.TrimRight(c.Request.Header.Get("Origin"), "/")
+		// Reflect the browser origin when it matches FRONTEND_URL (required for
+		// credentialed EventSource to api.* from the web host).
+		if origin != "" && origin == frontendURL {
 			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
 		} else {
 			c.Writer.Header().Set("Access-Control-Allow-Origin", frontendURL)
@@ -35,6 +38,7 @@ func main() {
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Email")
+		c.Writer.Header().Set("Vary", "Origin")
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusNoContent)
 			return

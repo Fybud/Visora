@@ -1,35 +1,43 @@
 # Visora — public frontend/api; worker private (no expose, no host ports).
+# Only Deploy-injected values: IMAGE_TAG (image lines) + *_HOST_PORT (ports lines).
+# Everything under environment: is empty → paste via Deploy UI Raw (.env.deploy).
 name: visora
 
 services:
   api-server:
-    image: fybud/visora-api:${IMAGE_TAG:-latest}
+    image: fybud/visora-api:${IMAGE_TAG:?IMAGE_TAG required}
     command: ["server"]
     restart: unless-stopped
     env_file: [.env]
     environment:
-      # Empty = paste in Deploy UI. Literal = fixed here. ${VAR:?…} = Deploy-injected.
       JWT_SECRET:
       GOOGLE_CLIENT_ID:
       GOOGLE_CLIENT_SECRET:
       OPENAI_API_KEY:
-      SERP_API_KEY:
-      TURNSTILE_SECRET_KEY:
       OPENAI_BASE_URL:
       VISORA_LLM_MODEL:
+      SERP_API_KEY:
+      TURNSTILE_SECRET_KEY:
       GEO_OPENAI_API_KEY:
+      GEO_OPENAI_BASE_URL:
+      GEO_MODEL_GPT:
+      GEO_MODEL_CLAUDE:
+      GEO_MODEL_GEMINI:
+      GEO_MODEL_GROK:
+      CRAWL_CONCURRENCY:
+      CRAWL_DELAY_MS:
+      SERP_CONCURRENCY:
+      GEO_CONCURRENCY:
       WORKER_STUCK_MINUTES:
       WORKER_MAX_ATTEMPTS:
-      # Deploy-injected — never pasted.
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required}
-      FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL required}
-      API_BASE_EXTERNAL: ${API_BASE_EXTERNAL:?API_BASE_EXTERNAL required}
-      # Literal: JWT is set on api.* and must be readable by the web host.
-      # Without this, Google OAuth succeeds then middleware bounces back to /.
-      COOKIE_DOMAIN: fybud.com
-      GIN_MODE: release
-      PORT: "8080"
+      DATABASE_URL:
+      FRONTEND_URL:
+      API_BASE_EXTERNAL:
+      COOKIE_DOMAIN:
+      GIN_MODE:
+      PORT:
     ports:
+      # Host port = Deploy. Container port 8080 must match pasted PORT=.
       - "127.0.0.1:${API_HOST_PORT}:8080"
     labels:
       fybud.expose: "true"
@@ -37,7 +45,6 @@ services:
       fybud.role: api
       fybud.health: "/api/health"
     healthcheck:
-      # alpine image installs wget explicitly in the Dockerfile.
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/api/health >/dev/null 2>&1 || exit 1"]
       interval: 15s
       timeout: 5s
@@ -46,38 +53,45 @@ services:
     networks: [fybud-net, internal]
 
   worker:
-    image: fybud/visora-api:${IMAGE_TAG:-latest}
+    image: fybud/visora-api:${IMAGE_TAG:?IMAGE_TAG required}
     command: ["worker"]
     restart: unless-stopped
     env_file: [.env]
     environment:
-      # Same paste keys the worker process reads (mirrors api-server secrets it needs).
       OPENAI_API_KEY:
-      SERP_API_KEY:
       OPENAI_BASE_URL:
       VISORA_LLM_MODEL:
+      SERP_API_KEY:
       GEO_OPENAI_API_KEY:
+      GEO_OPENAI_BASE_URL:
+      GEO_MODEL_GPT:
+      GEO_MODEL_CLAUDE:
+      GEO_MODEL_GEMINI:
+      GEO_MODEL_GROK:
+      CRAWL_CONCURRENCY:
+      CRAWL_DELAY_MS:
+      SERP_CONCURRENCY:
+      GEO_CONCURRENCY:
       WORKER_STUCK_MINUTES:
       WORKER_MAX_ATTEMPTS:
-      # Deploy-injected — never pasted.
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required}
+      DATABASE_URL:
     depends_on: [api-server]
     networks: [fybud-net]
 
   frontend:
-    image: fybud/visora-web:${IMAGE_TAG:-latest}
+    image: fybud/visora-web:${IMAGE_TAG:?IMAGE_TAG required}
     restart: unless-stopped
+    env_file: [.env]
     environment:
-      # In-cluster proxy to the API (not public). Host nginx fronts this container on :3000.
-      API_BASE_URL: http://api-server:8080/api
-      PORT: "3000"
+      API_BASE_URL:
+      WEB_PORT:
+    command: ["sh", "-c", "export PORT=\"$$WEB_PORT\"; exec node server.js"]
     ports:
       - "127.0.0.1:${WEB_HOST_PORT}:3000"
     labels:
       fybud.expose: "true"
       fybud.domain: visora.fybud.com
       fybud.role: web
-      # Process-up only — Next standalone image has no wget; Deploy probes the host port.
       fybud.health: "any"
     depends_on: [api-server]
     networks: [internal]

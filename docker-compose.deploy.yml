@@ -1,6 +1,5 @@
 # Visora — public frontend/api; worker private (no expose, no host ports).
-# Only Deploy-injected values: IMAGE_TAG (image lines) + *_HOST_PORT (ports lines).
-# Everything under environment: is empty → paste via Deploy UI Raw (.env.deploy).
+# Only Deploy-injected: IMAGE_TAG + *_HOST_PORT. Knobs / in-cluster URLs are literals.
 name: visora
 
 services:
@@ -20,24 +19,23 @@ services:
       TURNSTILE_SECRET_KEY:
       GEO_OPENAI_API_KEY:
       GEO_OPENAI_BASE_URL:
-      GEO_MODEL_GPT:
-      GEO_MODEL_CLAUDE:
-      GEO_MODEL_GEMINI:
-      GEO_MODEL_GROK:
-      CRAWL_CONCURRENCY:
-      CRAWL_DELAY_MS:
-      SERP_CONCURRENCY:
-      GEO_CONCURRENCY:
-      WORKER_STUCK_MINUTES:
-      WORKER_MAX_ATTEMPTS:
       DATABASE_URL:
       FRONTEND_URL:
       API_BASE_EXTERNAL:
-      COOKIE_DOMAIN:
-      GIN_MODE:
-      PORT:
+      COOKIE_DOMAIN: fybud.com
+      GIN_MODE: release
+      PORT: "8080"
+      GEO_MODEL_GPT: deepseek/deepseek-v4-flash
+      GEO_MODEL_CLAUDE: moonshotai/kimi-k2
+      GEO_MODEL_GEMINI: google/gemini-2.5-flash-lite
+      GEO_MODEL_GROK: google/gemini-2.0-flash-lite
+      CRAWL_CONCURRENCY: "6"
+      CRAWL_DELAY_MS: "100"
+      SERP_CONCURRENCY: "3"
+      GEO_CONCURRENCY: "1"
+      WORKER_STUCK_MINUTES: "25"
+      WORKER_MAX_ATTEMPTS: "3"
     ports:
-      # Host port = Deploy. Container port 8080 must match pasted PORT=.
       - "127.0.0.1:${API_HOST_PORT}:8080"
     labels:
       fybud.expose: "true"
@@ -64,17 +62,17 @@ services:
       SERP_API_KEY:
       GEO_OPENAI_API_KEY:
       GEO_OPENAI_BASE_URL:
-      GEO_MODEL_GPT:
-      GEO_MODEL_CLAUDE:
-      GEO_MODEL_GEMINI:
-      GEO_MODEL_GROK:
-      CRAWL_CONCURRENCY:
-      CRAWL_DELAY_MS:
-      SERP_CONCURRENCY:
-      GEO_CONCURRENCY:
-      WORKER_STUCK_MINUTES:
-      WORKER_MAX_ATTEMPTS:
       DATABASE_URL:
+      GEO_MODEL_GPT: deepseek/deepseek-v4-flash
+      GEO_MODEL_CLAUDE: moonshotai/kimi-k2
+      GEO_MODEL_GEMINI: google/gemini-2.5-flash-lite
+      GEO_MODEL_GROK: google/gemini-2.0-flash-lite
+      CRAWL_CONCURRENCY: "6"
+      CRAWL_DELAY_MS: "100"
+      SERP_CONCURRENCY: "3"
+      GEO_CONCURRENCY: "1"
+      WORKER_STUCK_MINUTES: "25"
+      WORKER_MAX_ATTEMPTS: "3"
     depends_on: [api-server]
     networks: [fybud-net]
 
@@ -83,8 +81,8 @@ services:
     restart: unless-stopped
     env_file: [.env]
     environment:
-      API_BASE_URL:
-      WEB_PORT:
+      API_BASE_URL: http://api-server:8080/api
+      WEB_PORT: "3000"
     command: ["sh", "-c", "export PORT=\"$$WEB_PORT\"; exec node server.js"]
     ports:
       - "127.0.0.1:${WEB_HOST_PORT}:3000"
